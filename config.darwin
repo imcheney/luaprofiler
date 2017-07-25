@@ -1,5 +1,5 @@
 
-LUA_INCLUDE= /usr/local/include/lua51
+LUA_INCLUDE= /usr/local/include/lua51  # this need to set by hand, alternative=/usr/local/include/lua5.1
 
 PROFILER_OUTPUT= bin/profiler.so
 

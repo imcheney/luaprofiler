@@ -1,4 +1,4 @@
-/*
+﻿/*
 ** LuaProfiler
 ** Copyright Kepler Project 2005-2007 (http://www.keplerproject.org/luaprofiler)
 ** $Id: lua50_profiler.c,v 1.16 2008-05-20 21:16:36 mascarenhas Exp $
@@ -222,6 +222,8 @@ static const luaL_reg prof_funcs[] = {
   { NULL, NULL }
 };
 
+//1, add `__declspec(dllexport)` if you are to build a Windows dll 
+__declspec(dllexport) 
 int luaopen_profiler(lua_State *L) {
   luaL_openlib(L, "profiler", prof_funcs, 0);
   lua_pushliteral (L, "_COPYRIGHT");
@@ -236,5 +238,7 @@ int luaopen_profiler(lua_State *L) {
   lua_pushliteral (L, "_VERSION");
   lua_pushliteral (L, "2.0.1");
   lua_settable (L, -3);
+  const char* const LIBRARY_NAME = "profiler"; //2, define a LIBRARY_NAME
+  luaL_register(L, LIBRARY_NAME, prof_funcs);  //3, to register the LIBRARY_NAME and fuctions
   return 1;
 }
