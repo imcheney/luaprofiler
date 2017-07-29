@@ -6,7 +6,7 @@
 
 /*****************************************************************************
 core_profiler.c:
-   Lua version independent profiler interface.
+   Lua version independent profiler interface. 这个部分是内部接口, 不会随着lua版本的变动而变动;
    Responsible for handling the "enter function" and "leave function" events
    and for writing the log file.
 
@@ -40,16 +40,16 @@ a depth-first search recursive algorithm).
 #include <stdarg.h>
 
 #include "function_meter.h"
-
+#include "LList.h"  //新加入的模块
 #include "core_profiler.h"
 
-    /* default log name (%s is used to place a random string) */
-#define OUT_FILENAME "lprof_%s.out"
-
+/* default log name (%s is used to place a random string) */
+#define OUT_FILENAME "lprof_%s.out"  //输出文件名的雏形
 #define MAX_FUNCTION_NAME_LENGTH 20
 
-    /* for faster execution (??) */
-static FILE *outf;
+	/* for faster execution (static:本文件内全局可见) */
+static FILE *outf;  //全局文件指针
+static outLList *llist;  //全局写出链表  TODO:（2）程序定时清空写出该链表所有内容(for week 5)
 static lprofS_STACK_RECORD *info;
 static float function_call_time;
 
@@ -57,33 +57,32 @@ static float function_call_time;
 /* output a line to the log file, using 'printf()' syntax */
 /* assume the timer is off */
 static void output(const char *format, ...) {
-  va_list ap;
-  va_start(ap, format);
-  vfprintf(outf, format, ap);
-  va_end(ap);
+	va_list ap;
+	va_start(ap, format);
+	vfprintf(outf, format, ap);
+	va_end(ap);
 
-  /* write now to avoid delays when the timer is on */
-  fflush(outf);
+	/* write now to avoid delays when the timer is on */
+	fflush(outf);
 }
-
 
 /* do not allow a string with '\n' and '|' (log file format reserved chars) */
 /* - replace them by ' '                                                    */
 static void formats(char *s) {
-  int i;
-  if (!s)
-    return;
-  for (i = strlen(s); i>=0; i--) {
-    if ((s[i] == '|') || (s[i] == '\n'))
-      s[i] = ' ';
-  }
+	int i;
+	if (!s)
+		return;
+	for (i = strlen(s); i >= 0; i--) {
+		if ((s[i] == '|') || (s[i] == '\n'))
+			s[i] = ' ';
+	}
 }
 
 
 /* computes new stack and new timer */
-void lprofP_callhookIN(lprofP_STATE* S, char *func_name, char *file, int linedefined, int currentline) {	
-  S->stack_level++;
-  lprofM_enter_function(S, file, func_name, linedefined, currentline);
+void lprofP_callhookIN(lprofP_STATE* S, char *func_name, char *file, int linedefined, int currentline) {
+	S->stack_level++;
+	lprofM_enter_function(S, file, func_name, linedefined, currentline);
 }
 
 
@@ -91,107 +90,123 @@ void lprofP_callhookIN(lprofP_STATE* S, char *func_name, char *file, int linedef
 /* returns if there is another function in the stack */
 int lprofP_callhookOUT(lprofP_STATE* S) {
 
-  if (S->stack_level == 0) {
-    return 0;
-  }
+	if (S->stack_level == 0) {
+		return 0;
+	}
 
-  S->stack_level--;
+	S->stack_level--;
 
-  /* 0: do not resume the parent function's timer yet... */
-  info = lprofM_leave_function(S, 0);
-  /* writing a log may take too long to be computed with the function's time ...*/
-  lprofM_pause_total_time(S);
-  info->local_time += function_call_time;
-  info->total_time += function_call_time;
-  
-  char* source = info->file_defined;
-  if (source[0] != '@') {
-     source = "(string)";
-  }
-  else {
-     formats(source);
-  }
-  char* name = info->function_name;
-  
-  if (strlen(name) > MAX_FUNCTION_NAME_LENGTH) {
-     name = malloc(MAX_FUNCTION_NAME_LENGTH+10);
-     name[0] = '\"';
-     strncpy(name+1, info->function_name, MAX_FUNCTION_NAME_LENGTH);
-     name[MAX_FUNCTION_NAME_LENGTH] = '"';
-     name[MAX_FUNCTION_NAME_LENGTH+1] = '\0';
-  }
-  formats(name);
-  output("%d\t%s\t%s\t%d\t%d\t%f\t%f\n", S->stack_level, source, name, 
-	 info->line_defined, info->current_line,
-	 info->local_time, info->total_time);
-  /* ... now it's ok to resume the timer */
-  if (S->stack_level != 0) {
-    lprofM_resume_function(S);
-  }
+	/* 0: do not resume the parent function's timer yet... */
+	info = lprofM_leave_function(S, 0);
+	/* writing a log may take too long to be computed with the function's time ...*/
+	lprofM_pause_total_time(S);
+	info->local_time += function_call_time;
+	info->total_time += function_call_time;
 
-  return 1;
+	char* source = info->file_defined;  //e.g. @test3.lua
+	if (source[0] != '@') {  //意味着没有得到文件名 i.e. (string)
+		source = "(string)";
+	}
+	else {
+		formats(source);
+	}
+	char* name = info->function_name;
 
+	if (strlen(name) > MAX_FUNCTION_NAME_LENGTH) {  //function_name too-long's solution
+		name = malloc(MAX_FUNCTION_NAME_LENGTH + 10);
+		name[0] = '\"';
+		strncpy(name + 1, info->function_name, MAX_FUNCTION_NAME_LENGTH);
+		name[MAX_FUNCTION_NAME_LENGTH] = '"';
+		name[MAX_FUNCTION_NAME_LENGTH + 1] = '\0';
+	}
+	formats(name);
+
+	/*---------output section begins---------*/
+
+	//old output, writes every time when a function exits
+	/*output("%d\t%s\t%s\t%d\t%d\t%f\t%f\n", S->stack_level, source, name,
+	   info->line_defined, info->current_line,
+	   info->local_time, info->total_time);*/
+
+	   //new output, 把添加一个record结点到llist链表中, 留待将来输出
+	char output_text[MAXSIZE_RECORD];
+	sprintf(output_text, "%d\t%s\t%s\t%d\t%d\t%f\t%f\n", S->stack_level, source, name,
+		info->line_defined, info->current_line,
+		info->local_time, info->total_time);
+	push_outLList(llist, output_text);
+	/*----------output section ends---------------------*/
+
+	/* ... now it's ok to resume the timer */
+	if (S->stack_level != 0) {
+		lprofM_resume_function(S);
+	}
+
+	return 1;
 }
 
 
 /* opens the log file */
 /* returns true if the file could be opened */
 lprofP_STATE* lprofP_init_core_profiler(const char *_out_filename, int isto_printheader, float _function_call_time) {
-  lprofP_STATE* S;
-  char auxs[256];
-  char *s;
-  char *randstr;
-  const char *out_filename;
+	lprofP_STATE* S;
+	char auxs[256];
+	char *s;
+	char *randstr;
+	const char *out_filename;
 
-  function_call_time = _function_call_time;
-  out_filename = (_out_filename) ? (_out_filename):(OUT_FILENAME);
-        
-  /* the random string to build the logname is extracted */
-  /* from 'tmpnam()' (the '/tmp/' part is deleted)     */
-  randstr = tmpnam(NULL);
-  for (s = strtok(randstr, "/\\"); s; s = strtok(NULL, "/\\")) {
-    randstr = s;
-  }
+	function_call_time = _function_call_time;
+	out_filename = (_out_filename) ? (_out_filename) : (OUT_FILENAME);
 
-  if(randstr[strlen(randstr)-1]=='.')
-    randstr[strlen(randstr)-1]='\0';
+	/* the random string to build the logname is extracted */
+	/* from 'tmpnam()' (the '/tmp/' part is deleted)     */
+	randstr = tmpnam(NULL);
+	for (s = strtok(randstr, "/\\"); s; s = strtok(NULL, "/\\")) {
+		randstr = s;
+	}
 
-  sprintf(auxs, out_filename, randstr);
-  outf = fopen(auxs, "a");
-  if (!outf) {
-    return 0;
-  }
+	if (randstr[strlen(randstr) - 1] == '.')
+		randstr[strlen(randstr) - 1] = '\0';
 
-  if (isto_printheader) {
-    output("stack_level\tfile_defined\tfunction_name\tline_defined\tcurrent_line\tlocal_time\ttotal_time\n");
-  }
+	sprintf(auxs, out_filename, randstr);  //此处设定auxs（打开文件名）
+	outf = fopen(auxs, "a");  //此处第一次打开文件
+	if (!outf) {
+		return 0;
+	}
 
-  /* initialize the 'function_meter' */
-  S = lprofM_init();
-  if(!S) {
-    fclose(outf);
-    return 0;
-  }
-    
-  return S;
+	if (isto_printheader) {
+		output("stack_level\tfile_defined\tfunction_name\tline_defined\tcurrent_line\tlocal_time\ttotal_time\n");
+	}
+
+	/*initialize the 'outLList'*/
+	llist = init_outLList();  //TODO:增强程序健壮性， 写malloc失败处理和报错
+
+	/* initialize the 'function_meter' */
+	S = lprofM_init();
+	if (!S) {
+		fclose(outf);
+		return 0;
+	}
+
+	return S;
 }
 
 void lprofP_close_core_profiler(lprofP_STATE* S) {
-  if(outf) fclose(outf);
-  if(S) free(S);
+	output_outLList(llist, outf);  //全体输出;
+	if (llist) destory_outLList(llist);  //关闭llist
+	if (outf) fclose(outf);  //关闭文件指针
+	if (S) free(S);  //释放profiler_state的堆内存
 }
 
 lprofP_STATE* lprofP_create_profiler(float _function_call_time) {
-  lprofP_STATE* S;
+	lprofP_STATE* S;
 
-  function_call_time = _function_call_time;
+	function_call_time = _function_call_time;
 
-  /* initialize the 'function_meter' */
-  S = lprofM_init();
-  if(!S) {
-    return 0;
-  }
-    
-  return S;
+	/* initialize the 'function_meter' */
+	S = lprofM_init();
+	if (!S) {
+		return 0;
+	}
+
+	return S;
 }
-

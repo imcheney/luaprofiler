@@ -1,0 +1,46 @@
+﻿  clocks.c
+  core_profiler.c
+  function_meter.c
+  lapi.c
+  lauxlib.c
+  lbaselib.c
+  lcode.c
+  ldblib.c
+  ldebug.c
+  ldo.c
+  ldump.c
+  lfunc.c
+  lgc.c
+  linit.c
+  liolib.c
+  llex.c
+  LList.c
+  lmathlib.c
+  lmem.c
+  loadlib.c
+  Generating Code...
+d:\dev\luaprofiler\src\llist.c(29): warning C4172: returning address of local variable or temporary: node
+  Compiling...
+  lobject.c
+  lopcodes.c
+  loslib.c
+  lparser.c
+  lstate.c
+  lstring.c
+  lstrlib.c
+  ltable.c
+  ltablib.c
+  ltm.c
+  lua.c
+  lua50_profiler.c
+  luac.c
+  lundump.c
+  lvm.c
+  lzio.c
+  print.c
+  stack.c
+  Generating Code...
+LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/OPT:ICF' specification
+     Creating library D:\dev\luaprofiler\src\Release\luaprofiler.lib and object D:\dev\luaprofiler\src\Release\luaprofiler.exp
+  luaprofiler.vcxproj -> D:\dev\luaprofiler\src\Release\luaprofiler.dll
+  luaprofiler.vcxproj -> D:\dev\luaprofiler\src\Release\luaprofiler.pdb (Full PDB)

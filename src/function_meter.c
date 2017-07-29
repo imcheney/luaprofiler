@@ -185,7 +185,7 @@ lprofS_STACK_RECORD *lprofM_leave_function(lprofP_STATE* S, int isto_resume) {
   compute_local_time(&leave_ret);
   compute_total_time(&leave_ret);
   /* resume the timer for the parent function ? */
-  if (isto_resume)
+  if (isto_resume)  //isto_resume一般传入的都是0, 即要等待打印完才resume
     lprofM_resume_local_time(S);
   return &leave_ret;
 }

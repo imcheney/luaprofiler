@@ -126,6 +126,9 @@
     <ClCompile Include="print.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="LList.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="profiler.def">
@@ -215,6 +218,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="lzio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

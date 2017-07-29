@@ -31,7 +31,7 @@
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
@@ -70,6 +70,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <TargetExt>.dll</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -88,7 +89,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -118,6 +119,7 @@
     <ClCompile Include="linit.c" />
     <ClCompile Include="liolib.c" />
     <ClCompile Include="llex.c" />
+    <ClCompile Include="LList.c" />
     <ClCompile Include="lmathlib.c" />
     <ClCompile Include="lmem.c" />
     <ClCompile Include="loadlib.c" />
@@ -156,6 +158,7 @@
     <ClInclude Include="lgc.h" />
     <ClInclude Include="llex.h" />
     <ClInclude Include="llimits.h" />
+    <ClInclude Include="LList.h" />
     <ClInclude Include="lmem.h" />
     <ClInclude Include="lobject.h" />
     <ClInclude Include="lopcodes.h" />

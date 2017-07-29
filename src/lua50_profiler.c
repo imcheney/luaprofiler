@@ -28,6 +28,7 @@ static int profstate_id;
 static float calcCallTime(lua_State *L);
 static int profiler_stop(lua_State *L);
 
+/*================function set 1: special dealers===============*/
 /* called by Lua (via the callhook mechanism) */
 static void callhook(lua_State *L, lua_Debug *ar) {
   int currentline;
@@ -56,7 +57,6 @@ static void callhook(lua_State *L, lua_Debug *ar) {
     lprofP_callhookOUT(S);
   }
 }
-
 
 /* Lua function to exit politely the profiler                               */
 /* redefines the lua exit() function to not break the log file integrity    */
@@ -95,6 +95,34 @@ static int coroutine_create(lua_State *L) {
 }
 #endif
 
+/* calculates the approximate time Lua takes to call a function */
+static float calcCallTime(lua_State *L) {
+	clock_t timer;
+	char lua_code[] = "                                     \
+                   function lprofT_mesure_function()    \
+                   local i                              \
+                                                        \
+                      local t = function()              \
+                      end                               \
+                                                        \
+                      i = 1                             \
+                      while (i < 100000) do             \
+                         t()                            \
+                         i = i + 1                      \
+                      end                               \
+                   end                                  \
+                                                        \
+                   lprofT_mesure_function()             \
+                   lprofT_mesure_function = nil         \
+                 ";
+
+	lprofC_start_timer(&timer);
+	luaL_dostring(L, lua_code);
+	return lprofC_get_seconds(timer) / (float)100000;
+}
+
+/*================function set 2: basic controls===============*/
+
 static int profiler_pause(lua_State *L) {
   lprofP_STATE* S;
   lua_pushlightuserdata(L, &profstate_id);
@@ -129,7 +157,7 @@ static int profiler_init(lua_State *L) {
 
   outfile = NULL;
   if(lua_gettop(L) >= 1)
-    outfile = luaL_checkstring(L, 1);
+    outfile = luaL_checkstring(L, 1);  //此处可能输入outfile名
 
   /* init with default file name and printing a header line */
   if (!(S=lprofP_init_core_profiler(outfile, 1, function_call_time))) {
@@ -188,32 +216,6 @@ static int profiler_stop(lua_State *L) {
   return 1;
 }
 
-/* calculates the approximate time Lua takes to call a function */
-static float calcCallTime(lua_State *L) {
-  clock_t timer;
-  char lua_code[] = "                                     \
-                   function lprofT_mesure_function()    \
-                   local i                              \
-                                                        \
-                      local t = function()              \
-                      end                               \
-                                                        \
-                      i = 1                             \
-                      while (i < 100000) do             \
-                         t()                            \
-                         i = i + 1                      \
-                      end                               \
-                   end                                  \
-                                                        \
-                   lprofT_mesure_function()             \
-                   lprofT_mesure_function = nil         \
-                 ";
-
-  lprofC_start_timer(&timer);
-  luaL_dostring(L, lua_code);
-  return lprofC_get_seconds(timer) / (float) 100000;
-}
-
 static const luaL_reg prof_funcs[] = {
   { "pause", profiler_pause },
   { "resume", profiler_resume },
@@ -222,8 +224,10 @@ static const luaL_reg prof_funcs[] = {
   { NULL, NULL }
 };
 
-//1, add `__declspec(dllexport)` if you are to build a Windows dll 
-__declspec(dllexport) 
+//this part is tricky if you are using Windows to build a DLL.
+//for macOS or Linux, delete code annotated @1, @2 and @3
+
+__declspec(dllexport)  //@1, add only to build a Windows dll
 int luaopen_profiler(lua_State *L) {
   luaL_openlib(L, "profiler", prof_funcs, 0);
   lua_pushliteral (L, "_COPYRIGHT");
@@ -238,7 +242,7 @@ int luaopen_profiler(lua_State *L) {
   lua_pushliteral (L, "_VERSION");
   lua_pushliteral (L, "2.0.1");
   lua_settable (L, -3);
-  const char* const LIBRARY_NAME = "profiler"; //2, define a LIBRARY_NAME
-  luaL_register(L, LIBRARY_NAME, prof_funcs);  //3, to register the LIBRARY_NAME and fuctions
+  const char* const LIBRARY_NAME = "profiler"; //@2, define a LIBRARY_NAME
+  luaL_register(L, LIBRARY_NAME, prof_funcs);  //@3, to register the LIBRARY_NAME and fuctions
   return 1;
 }
